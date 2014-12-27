@@ -718,7 +718,6 @@ class Path:
     oldStart = self.start
     return Path(newStart, [(newTransit, oldStart)] + self.transitions)
 
-
 def PossiblePaths(starts, transits):
   if len(starts) == 0:
     return []  # no possible paths
@@ -752,10 +751,87 @@ def PossibleDestinations(starts, transits):
     destinations.add(p.finalLocation())
   return sorted(list(destinations))
 
-# Example
-starts = ANY_START_LOCATION
-transits = [TAXI, ANY_TRANSIT]
-paths = PossiblePaths(starts, transits)
-for path in paths:
-  print path
-print PossibleDestinations(starts, transits)
+## Example
+#starts = ANY_START_LOCATION
+#transits = [TAXI, ANY_TRANSIT]
+#paths = PossiblePaths(starts, transits)
+#for path in paths:
+#  print path
+#print PossibleDestinations(starts, transits)
+
+### SERVER ###
+
+import urlparse
+import BaseHTTPServer
+
+class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+  def writeLines(self, *lines):
+    for line in lines:
+      self.wfile.write(line + "\n")
+
+  def do_GET(self):
+    self.send_response(200)
+    self.send_header("Content-type", "text/html")
+    self.end_headers()
+
+    path = self.path
+    if "?" in path:
+      params = urlparse.parse_qs(path.split("?", 1)[1])
+    else:
+      params = {}
+
+    self.writeLines(
+        "<html>",
+        "<body>",
+        "Params = " + str(params),
+        "<br/>")
+
+    if "starts" in params:
+      starts = params["starts"][0]
+      if starts == 'any':
+        starts = ANY_LOCATION
+      elif starts == 'any_start_location':
+        starts = ANY_START_LOCATION
+      else:
+        starts = [int(n) for n in starts.split(",")]
+      def parseTransit(s):
+        if s == "taxi": return TAXI
+        elif s == "bus": return BUS
+        elif s == "underground": return UNDERGROUND
+        elif s == "any": return ANY_TRANSIT
+      if "transits" not in params:
+        transits = []
+      else:
+        transits = map(parseTransit, params["transits"][0].split(","))
+      self.writeLines(
+          "Starts = " + str(starts),
+          "<br/>",
+          "Transits = " + str(transits),
+          "<br/>")
+      result = PossiblePaths(starts, transits)
+      for path in result:
+        self.writeLines(str(path),
+            "<br/>")
+      result = PossibleDestinations(starts, transits)
+      self.writeLines("Destinations: " + str(result))
+
+    self.writeLines(
+        "<img src=\"http://worldofstuart.excellentcontent.com/unlocked/scotland/scotyardfull.jpg\"/>",
+        "</body>",
+        "</html>")
+
+PORT = 8000
+
+MyHandler.protocol_version = "HTTP/1.0"
+
+server_address = ("127.0.0.1", PORT)
+httpd = BaseHTTPServer.HTTPServer(server_address, MyHandler)
+
+try:
+  sa = httpd.socket.getsockname()
+  print "Serving HTTP on", sa[0], "at port", sa[1]
+  httpd.serve_forever()
+except KeyboardInterrupt:
+  print ""
+  print "Shutting down web server"
+  httpd.socket.close()
