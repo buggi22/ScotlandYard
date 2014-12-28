@@ -88,28 +88,31 @@ def PossibleDestinations(starts, transits):
 
 import urlparse
 import BaseHTTPServer
+import json
 
 class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-  def writeLines(self, *lines):
-    for line in lines:
-      self.wfile.write(line + "\n")
-
   def do_GET(self):
+    path = self.path
+    if self.path == "/ScotlandYard.html":
+      self.send_response(200)
+      self.send_header("Content-type", "text/html")
+      self.end_headers()
+      f = open("ScotlandYard.html")
+      self.wfile.write(f.read())
+      f.close()
+      return
+
     self.send_response(200)
-    self.send_header("Content-type", "text/html")
+    self.send_header("Content-type", "application/json")
     self.end_headers()
 
-    path = self.path
     if "?" in path:
-      params = urlparse.parse_qs(path.split("?", 1)[1])
+      pathSplit = path.split("?", 1)
+      params = urlparse.parse_qs(pathSplit[1])
     else:
       params = {}
 
-    self.writeLines(
-        "<html>",
-        "<body>",
-        "Params = " + str(params),
-        "<br/>")
+    response = {"paths": [], "locations": []}
 
     if "starts" in params:
       starts = params["starts"][0]
@@ -128,22 +131,16 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         transits = []
       else:
         transits = map(parseTransit, params["transits"][0].split(","))
-      self.writeLines(
-          "Starts = " + str(starts),
-          "<br/>",
-          "Transits = " + str(transits),
-          "<br/>")
-      result = PossiblePaths(starts, transits)
-      for path in result:
-        self.writeLines(str(path),
-            "<br/>")
-      result = PossibleDestinations(starts, transits)
-      self.writeLines("Destinations: " + str(result))
 
-    self.writeLines(
-        "<img src=\"http://worldofstuart.excellentcontent.com/unlocked/scotland/scotyardfull.jpg\"/>",
-        "</body>",
-        "</html>")
+      paths = PossiblePaths(starts, transits)
+      for path in paths:
+        pathAsDict = {"start": path.start, "transitions": []}
+        for step in path.transitions:
+          pathAsDict["transitions"].append({"via": step[0], "to": step[1]})
+        response["paths"].append(pathAsDict)
+      response["locations"] = PossibleDestinations(starts, transits)
+
+    self.wfile.write(json.dumps(response, sort_keys=True))
 
 PORT = 8000
 
