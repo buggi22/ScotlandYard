@@ -232,6 +232,13 @@ for (i = 0; i < coords.length/2; i++) {
   $("#container").append(element);
 }
 
+$.ajax({
+  type: "GET",
+  url: "http://127.0.0.1:8000/ajax?starts=any_start_location&transits=bus",
+}).done(function(msg) {
+  console.log(JSON.stringify(msg));
+});
+
 </script>
 
 </body>
