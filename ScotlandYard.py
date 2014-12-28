@@ -89,25 +89,27 @@ def PossibleDestinations(starts, transits):
 import urlparse
 import BaseHTTPServer
 import json
+import SimpleHTTPServer
 
-class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+  def writeLines(self, *lines):
+    for line in lines:
+      self.wfile.write(line + "\n")
+
   def do_GET(self):
-    path = self.path
-    if self.path == "/ScotlandYard.html":
-      self.send_response(200)
-      self.send_header("Content-type", "text/html")
-      self.end_headers()
-      f = open("ScotlandYard.html")
-      self.wfile.write(f.read())
-      f.close()
-      return
+    if self.path == "/":
+      self.path = "/ScotlandYard.html"
+
+    checkext = lambda x : self.path.endswith(x)
+    if any(map(checkext, [".html", ".css", ".js", ".jpg"])):
+      return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self);
 
     self.send_response(200)
     self.send_header("Content-type", "application/json")
     self.end_headers()
 
-    if "?" in path:
-      pathSplit = path.split("?", 1)
+    if "?" in self.path:
+      pathSplit = self.path.split("?", 1)
       params = urlparse.parse_qs(pathSplit[1])
     else:
       params = {}
@@ -139,6 +141,9 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
           pathAsDict["transitions"].append({"via": step[0], "to": step[1]})
         response["paths"].append(pathAsDict)
       response["locations"] = PossibleDestinations(starts, transits)
+
+    if "fullboard" in params:
+      response["board"] = FullBoard
 
     self.wfile.write(json.dumps(response, sort_keys=True))
 
