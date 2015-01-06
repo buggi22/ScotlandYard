@@ -158,6 +158,7 @@ httpd = BaseHTTPServer.HTTPServer(server_address, MyHandler)
 try:
   sa = httpd.socket.getsockname()
   print "Serving HTTP on", sa[0], "at port", sa[1]
+  print "URL: http://" + sa[0] + ":" + str(sa[1])
   httpd.serve_forever()
 except KeyboardInterrupt:
   print ""
