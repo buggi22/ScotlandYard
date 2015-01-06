@@ -102,6 +102,7 @@ class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
     checkext = lambda x : self.path.endswith(x)
     if any(map(checkext, [".html", ".css", ".js", ".jpg"])):
+      self.path = "/client" + self.path
       return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self);
 
     self.send_response(200)
